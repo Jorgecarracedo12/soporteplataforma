@@ -219,7 +219,7 @@ function Portada({ onSelect }) {
         <div className="flex items-center gap-2">
           <div style={{ width: 22, height: 22, borderRadius: 6, background: "linear-gradient(135deg, #1652F0, #4C8CFF)" }} />
           <span style={{ color: "#F5F7FB", fontSize: 13, fontWeight: 700, letterSpacing: "0.04em" }}>PRIZMA</span>
-          <span style={{ color: "#6E7C99", fontSize: 12 }}>· Ecosistema institucional</span>
+          <span style={{ color: "#6E7C99", fontSize: 12 }}>· Soporte plataforma institucional</span>
         </div>
       </div>
 
