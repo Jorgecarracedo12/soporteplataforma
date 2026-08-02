@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+   import React, { useState, useMemo, useEffect } from "react";
 import {
   Search, User, Mail, KeyRound, Paperclip, Clock, Building2,
   Flag, MessageSquare, History, LogOut, Inbox, Eye, EyeOff, Tag, Save,
@@ -1885,6 +1885,11 @@ function PanelAsesores({ agentes, onCambio, agenteActual }) {
 function PanelMiPerfil({ agenteActual, onCambio }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const esLider = agenteActual.rol === ROL_LIDER;
+
+  const [editandoDatos, setEditandoDatos] = useState(false);
+  const [formNombre, setFormNombre] = useState(agenteActual.nombre);
+  const [formUsuario, setFormUsuario] = useState(agenteActual.usuario);
 
   async function actualizarAvatar(valor) {
     setGuardando(true);
@@ -1892,6 +1897,31 @@ function PanelMiPerfil({ agenteActual, onCambio }) {
     try {
       await apiPatch(`/api/agentes/${agenteActual.id}`, { avatar: valor });
       await onCambio();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  function iniciarEdicionDatos() {
+    setFormNombre(agenteActual.nombre);
+    setFormUsuario(agenteActual.usuario);
+    setError("");
+    setEditandoDatos(true);
+  }
+
+  async function guardarDatos() {
+    if (!formNombre.trim() || !formUsuario.trim()) {
+      setError("El nombre y el usuario no pueden estar vacíos.");
+      return;
+    }
+    setGuardando(true);
+    setError("");
+    try {
+      await apiPatch(`/api/agentes/${agenteActual.id}`, { nombre: formNombre.trim(), usuario: formUsuario.trim() });
+      await onCambio();
+      setEditandoDatos(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1912,23 +1942,58 @@ function PanelMiPerfil({ agenteActual, onCambio }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 text-sm">
-          <div>
-            <div className="text-[11px] font-semibold" style={{ color: "#9AA4B2" }}>NOMBRE COMPLETO</div>
-            <div style={{ color: "#1B2430" }}>{agenteActual.nombre}</div>
+        {editandoDatos ? (
+          <div className="mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="text-[11px] font-semibold mb-1 block" style={{ color: "#9AA4B2" }}>NOMBRE COMPLETO</label>
+                <input value={formNombre} onChange={(e) => setFormNombre(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9" }} />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold mb-1 block" style={{ color: "#9AA4B2" }}>USUARIO</label>
+                <input value={formUsuario} onChange={(e) => setFormUsuario(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9" }} />
+              </div>
+            </div>
+            {error && <div className="text-xs mb-3" style={{ color: "#D64545" }}>{error}</div>}
+            <div className="flex gap-2">
+              <button onClick={guardarDatos} disabled={guardando} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "#1652F0", color: "#FFFFFF" }}>
+                {guardando ? "Guardando..." : "Guardar cambios"}
+              </button>
+              <button onClick={() => setEditandoDatos(false)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "#F4F6F9", color: "#5A6577" }}>
+                Cancelar
+              </button>
+            </div>
           </div>
-          <div>
-            <div className="text-[11px] font-semibold" style={{ color: "#9AA4B2" }}>ROL</div>
-            <div style={{ color: "#1B2430" }}>{agenteActual.rol}</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5 text-sm">
+            <div>
+              <div className="text-[11px] font-semibold" style={{ color: "#9AA4B2" }}>NOMBRE COMPLETO</div>
+              <div style={{ color: "#1B2430" }}>{agenteActual.nombre}</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold" style={{ color: "#9AA4B2" }}>ROL</div>
+              <div style={{ color: "#1B2430" }}>{agenteActual.rol}</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold" style={{ color: "#9AA4B2" }}>CUENTA CREADA</div>
+              <div style={{ color: "#1B2430" }}>{agenteActual.fechaCreacion || "—"}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-[11px] font-semibold" style={{ color: "#9AA4B2" }}>CUENTA CREADA</div>
-            <div style={{ color: "#1B2430" }}>{agenteActual.fechaCreacion || "—"}</div>
+        )}
+
+        {esLider ? (
+          !editandoDatos && (
+            <button onClick={iniciarEdicionDatos} className="text-xs font-semibold" style={{ color: "#1652F0" }}>
+              Editar nombre y usuario
+            </button>
+          )
+        ) : (
+          <div className="text-xs" style={{ color: "#B7BFCB" }}>
+            El nombre, usuario, rol y permisos solo pueden ser modificados por el Líder de Área.
           </div>
-        </div>
-        <div className="text-xs" style={{ color: "#B7BFCB" }}>
-          El nombre, usuario, rol y permisos solo pueden ser modificados por el Líder de Área.
-        </div>
+        )}
       </div>
 
       <div className="p-6 rounded-xl mb-5" style={{ background: "#FFFFFF", border: "1px solid #E2E6EC" }}>
