@@ -1,4 +1,4 @@
-   import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search, User, Mail, KeyRound, Paperclip, Clock, Building2,
   Flag, MessageSquare, History, LogOut, Inbox, Eye, EyeOff, Tag, Save,
@@ -1441,11 +1441,23 @@ function ModuloReportes({ tickets, agentes, agenteActual }) {
 
   // ----- Exportación (respeta los filtros aplicados) -----
   function construirFilas() {
-    const rows = [["Ticket", "Estudiante", "Identificacion", "Categoria", "Subcategoria", "Area", "Asesor", "Prioridad", "Estado", "Creado"]];
-    ticketsFiltrados.forEach((t) => rows.push([
-      "TCK-" + String(t.id).padStart(4, "0"), t.nombre, t.codigo, t.categoria, t.subcategoria || "",
-      t.area, t.asesor, t.prioridad, t.estado, t.creado,
-    ]));
+    const rows = [[
+      "Ticket", "Estudiante", "Identificacion", "Categoria", "Subcategoria", "Area", "Asesor",
+      "Prioridad", "Estado", "Creado", "Descripcion del estudiante",
+      "Respuestas de los asesores al estudiante", "Novedad de area / Remision",
+    ]];
+    ticketsFiltrados.forEach((t) => {
+      const respuestasTexto = (t.historialRespuestas || [])
+        .map((r) => `[${r.fecha}] ${r.texto}`)
+        .join(" | ");
+      rows.push([
+        "TCK-" + String(t.id).padStart(4, "0"), t.nombre, t.codigo, t.categoria, t.subcategoria || "",
+        t.area, t.asesor, t.prioridad, t.estado, t.creado,
+        t.descripcion || "",
+        respuestasTexto,
+        t.novedadArea || "",
+      ]);
+    });
     return rows;
   }
   function exportarCSV() {
@@ -1459,6 +1471,10 @@ function ModuloReportes({ tickets, agentes, agenteActual }) {
   function exportarExcel() {
     const rows = construirFilas();
     const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 10 }, { wch: 20 }, { wch: 16 }, { wch: 22 }, { wch: 30 }, { wch: 18 }, { wch: 16 },
+      { wch: 10 }, { wch: 18 }, { wch: 17 }, { wch: 45 }, { wch: 55 }, { wch: 45 },
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tickets");
     XLSX.writeFile(wb, "reporte_tickets.xlsx");
@@ -1891,6 +1907,46 @@ function PanelMiPerfil({ agenteActual, onCambio }) {
   const [formNombre, setFormNombre] = useState(agenteActual.nombre);
   const [formUsuario, setFormUsuario] = useState(agenteActual.usuario);
 
+  const [passwordActual, setPasswordActual] = useState("");
+  const [passwordNueva, setPasswordNueva] = useState("");
+  const [passwordConfirmar, setPasswordConfirmar] = useState("");
+  const [errorPassword, setErrorPassword] = useState("");
+  const [exitoPassword, setExitoPassword] = useState(false);
+  const [guardandoPassword, setGuardandoPassword] = useState(false);
+
+  async function guardarPassword() {
+    setErrorPassword("");
+    setExitoPassword(false);
+    if (!passwordActual.trim() || !passwordNueva.trim()) {
+      setErrorPassword("Completa tu contraseña actual y la nueva.");
+      return;
+    }
+    if (passwordNueva.trim().length < 4) {
+      setErrorPassword("La nueva contraseña debe tener al menos 4 caracteres.");
+      return;
+    }
+    if (passwordNueva.trim() !== passwordConfirmar.trim()) {
+      setErrorPassword("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+    setGuardandoPassword(true);
+    try {
+      await apiPatch(`/api/agentes/${agenteActual.id}`, {
+        passwordActual: passwordActual.trim(),
+        password: passwordNueva.trim(),
+      });
+      setPasswordActual("");
+      setPasswordNueva("");
+      setPasswordConfirmar("");
+      setExitoPassword(true);
+      setTimeout(() => setExitoPassword(false), 2500);
+    } catch (err) {
+      setErrorPassword(err.message);
+    } finally {
+      setGuardandoPassword(false);
+    }
+  }
+
   async function actualizarAvatar(valor) {
     setGuardando(true);
     setError("");
@@ -2015,13 +2071,35 @@ function PanelMiPerfil({ agenteActual, onCambio }) {
         </div>
       </div>
 
-      <div className="p-6 rounded-xl" style={{ background: "#FFFFFF", border: "1px solid #E2E6EC", opacity: 0.6 }}>
+      <div className="p-6 rounded-xl" style={{ background: "#FFFFFF", border: "1px solid #E2E6EC", opacity: esLider ? 1 : 0.6 }}>
         <div className="text-sm font-semibold mb-1" style={{ color: "#1B2430" }}>Cambiar contraseña</div>
-        <div className="text-xs mb-3" style={{ color: "#9AA4B2" }}>Disponible próximamente.</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input disabled placeholder="Contraseña actual" className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9", background: "#F5F7FB" }} />
-          <input disabled placeholder="Nueva contraseña" className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9", background: "#F5F7FB" }} />
-        </div>
+        {esLider ? (
+          <>
+            <div className="text-xs mb-3" style={{ color: "#9AA4B2" }}>Debes confirmar tu contraseña actual para poder cambiarla.</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+              <input type="password" placeholder="Contraseña actual" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9" }} />
+              <input type="password" placeholder="Nueva contraseña" value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9" }} />
+              <input type="password" placeholder="Confirmar nueva contraseña" value={passwordConfirmar} onChange={(e) => setPasswordConfirmar(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9" }} />
+            </div>
+            {errorPassword && <div className="text-xs mb-3" style={{ color: "#D64545" }}>{errorPassword}</div>}
+            <button onClick={guardarPassword} disabled={guardandoPassword}
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{ background: exitoPassword ? "#2FAE6B" : "#1652F0", color: "#FFFFFF" }}>
+              {guardandoPassword ? "Guardando..." : exitoPassword ? "Contraseña actualizada" : "Actualizar contraseña"}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="text-xs mb-3" style={{ color: "#9AA4B2" }}>Disponible próximamente.</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input disabled placeholder="Contraseña actual" className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9", background: "#F5F7FB" }} />
+              <input disabled placeholder="Nueva contraseña" className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: "1px solid #DDE2E9", background: "#F5F7FB" }} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
