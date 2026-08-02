@@ -40,6 +40,7 @@ async function apiFetch(ruta, opciones = {}) {
 const apiGet = (ruta) => apiFetch(ruta);
 const apiPost = (ruta, body) => apiFetch(ruta, { method: "POST", body: JSON.stringify(body) });
 const apiPatch = (ruta, body) => apiFetch(ruta, { method: "PATCH", body: JSON.stringify(body) });
+const apiDelete = (ruta) => apiFetch(ruta, { method: "DELETE" });
 
 // Traduce un ticket tal como lo devuelve la API (columnas de la base de datos)
 // a la forma interna que ya usan todos los componentes de este archivo.
@@ -764,6 +765,7 @@ function DashboardSoporte({ agenteActual: agenteActualProp, onLogout }) {
     setNovedadLocal("");
     setMostrarPassword(false);
     setGuardadoOk(false);
+    setConfirmarEliminar(false);
     if (seleccionadoId) cargarDetalle(seleccionadoId);
     else setSeleccionado(null);
   }, [seleccionadoId]);
@@ -810,6 +812,24 @@ function DashboardSoporte({ agenteActual: agenteActualProp, onLogout }) {
       setTimeout(() => setGuardadoOk(false), 2000);
     } catch (err) {
       setErrorGeneral(err.message);
+    }
+  }
+
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+
+  async function eliminarTicket() {
+    if (!seleccionado) return;
+    setEliminando(true);
+    try {
+      await apiDelete(`/api/tickets/${seleccionado.id}`);
+      setSeleccionadoId(null);
+      setConfirmarEliminar(false);
+      await cargarTickets();
+    } catch (err) {
+      setErrorGeneral(err.message);
+    } finally {
+      setEliminando(false);
     }
   }
 
@@ -1172,6 +1192,33 @@ function DashboardSoporte({ agenteActual: agenteActualProp, onLogout }) {
                       style={{ background: guardadoOk ? "#2FAE6B" : "#1652F0", color: "#FFFFFF" }}>
                       <Save size={14} /> {guardadoOk ? "Guardado" : "Guardar novedad de área"}
                     </button>
+                  </div>
+
+                  <div className="p-5" style={{ borderTop: "1px solid #EEF0F3" }}>
+                    <div className="text-[11px] font-bold mb-2" style={{ color: "#A62E2E", letterSpacing: "0.05em" }}>ZONA DE PELIGRO</div>
+                    {!confirmarEliminar ? (
+                      <button onClick={() => setConfirmarEliminar(true)}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold"
+                        style={{ background: "#FCEAEA", color: "#A62E2E" }}>
+                        Eliminar ticket
+                      </button>
+                    ) : (
+                      <div className="p-3 rounded-lg" style={{ background: "#FCEAEA" }}>
+                        <div className="text-xs mb-3" style={{ color: "#A62E2E" }}>
+                          Esta acción es permanente y borrará el ticket, sus respuestas e historial. ¿Confirmas?
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={eliminarTicket} disabled={eliminando}
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold" style={{ background: "#D64545", color: "#FFFFFF" }}>
+                            {eliminando ? "Eliminando..." : "Sí, eliminar"}
+                          </button>
+                          <button onClick={() => setConfirmarEliminar(false)}
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold" style={{ background: "#FFFFFF", color: "#5A6577" }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
