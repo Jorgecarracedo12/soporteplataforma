@@ -303,7 +303,7 @@ function Portada({ onSelect }) {
       </div>
 
       <div className="text-center text-xs pb-6" style={{ color: "#9AA4B2" }}>
-        <div className="mb-1">Prototipo de demostración — los datos se reinician al recargar la página.</div>
+        <div className="mb-1">Prototipo de demostración.</div>
         <div>Desarrollado por <strong style={{ color: "#5B6472" }}>Jorge Carracedo Cortes</strong></div>
       </div>
     </div>
