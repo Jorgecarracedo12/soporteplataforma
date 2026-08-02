@@ -1195,7 +1195,6 @@ function DashboardSoporte({ agenteActual: agenteActualProp, onLogout }) {
                   </div>
 
                   <div className="p-5" style={{ borderTop: "1px solid #EEF0F3" }}>
-                    <div className="text-[11px] font-bold mb-2" style={{ color: "#A62E2E", letterSpacing: "0.05em" }}>ZONA DE PELIGRO</div>
                     {!confirmarEliminar ? (
                       <button onClick={() => setConfirmarEliminar(true)}
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold"
